@@ -2,30 +2,32 @@ name: CI
 
 on:
   push:
-    branches: [ codex ]
+    branches: ['**']        # реагируем на push в ЛЮБУЮ ветку
   pull_request:
-    branches: [ main ]
+    branches: [ main ]      # и на PR в main
+  workflow_dispatch:         # даёт кнопку "Run workflow" вручную
 
 jobs:
   build:
-    name: build (pnpm)
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+          cache: 'pnpm'
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm run build
+        run: pnpm build
