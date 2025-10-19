@@ -7,6 +7,10 @@ on:
     branches: [ main ]        # и на PR в main
   workflow_dispatch:          # кнопка "Run workflow"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   build:
     runs-on: ubuntu-latest
