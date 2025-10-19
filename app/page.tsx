@@ -1,5 +1,10 @@
 'use client';
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, type PropsWithChildren, type ReactNode } from "react";
+type SectionProps = PropsWithChildren<{
+  title: string;
+  actions?: ReactNode;
+  className?: string;
+}>;
 
 type QuestionType = "stars" | "binary" | "text";
 
@@ -41,7 +46,7 @@ type Project = {
   tasks: Task[];
 };
 
-const Section: React.FC<{ title: string; actions?: React.ReactNode; className?: string }> = ({ title, actions, className, children }) => (
+const Section: React.FC<SectionProps> = ({ title, actions, className, children }) => (
   <div className={`bg-white/5 border border-white/10 rounded-2xl p-5 ${className ?? ""}`}>
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
