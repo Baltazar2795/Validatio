@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']          # реагируем на push в любую ветку
+  pull_request:
+    branches: [ main ]        # и на PR в main
+  workflow_dispatch:          # кнопка "Run workflow"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      S3_BUCKET:             ${{ secrets.S3_BUCKET }}
+      S3_REGION:             ${{ secrets.S3_REGION }}
+      S3_ENDPOINT:           ${{ secrets.S3_ENDPOINT }}
+      S3_ACCESS_KEY_ID:      ${{ secrets.S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY:  ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      NEXT_TELEMETRY_DISABLED: '1'   # необязательно, просто отключает телеметрию Next
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
