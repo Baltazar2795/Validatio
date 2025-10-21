@@ -155,6 +155,7 @@ const PageShell: React.FC<{
   title?: string;
   setView: (v: View) => void;
   view: View;
+  children?: React.ReactNode;
 }> = ({ children, title, setView, view }) => {
   const NavItem: React.FC<{
     label: string;
@@ -222,6 +223,7 @@ const Modal: React.FC<{
   open: boolean;
   onClose: () => void;
   title: string;
+  children?: React.ReactNode;
 }> = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
