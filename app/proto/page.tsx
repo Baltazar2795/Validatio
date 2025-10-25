@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Example, Turn, parseUploaded } from "@/lib/parseUploads";
 
 /**
  * VALIDATIO – SPA-прототип на React (один файл)
@@ -25,6 +26,7 @@ interface TaskFile {
   name: string;
   size: number;
   content?: any; // распарсенный JSON
+  examples?: Example[];
 }
 
 interface Task {
@@ -326,10 +328,13 @@ const TaskUpload: React.FC<{
       if (!f.name.endsWith(".json")) continue;
       const text = await f.text();
       let parsed: any = null;
+      let examples: Example[] | undefined;
       try {
         parsed = JSON.parse(text);
+        const parsedExamples = parseUploaded(parsed);
+        examples = parsedExamples.length > 0 ? parsedExamples : undefined;
       } catch {}
-      arr.push({ id: uid(), name: f.name, size: f.size, content: parsed });
+      arr.push({ id: uid(), name: f.name, size: f.size, content: parsed, examples });
     }
     setFiles(arr);
   }
@@ -365,7 +370,13 @@ const TaskUpload: React.FC<{
                 <div className="font-medium">{f.name}</div>
                 <div className="text-xs text-zinc-400">{(f.size / 1024).toFixed(1)} КБ</div>
               </div>
-              <div className="text-xs text-zinc-400">{f.content ? "JSON ок" : "не удалось распарсить"}</div>
+              <div className="text-xs text-zinc-400">
+                {f.examples?.length
+                  ? `Примеров: ${f.examples.length}`
+                  : f.content
+                  ? "JSON ок"
+                  : "не удалось распарсить"}
+              </div>
             </div>
           ))}
         </div>
@@ -732,7 +743,7 @@ const QuestionnaireEditor: React.FC<{
   );
 };
 
-const DialogViewer: React.FC<{ title: string; data: any[] | undefined }> = ({ title, data }) => {
+const DialogViewer: React.FC<{ title: string; data: Turn[] | undefined }> = ({ title, data }) => {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
       <div className="font-medium mb-3">{title}</div>
@@ -740,12 +751,18 @@ const DialogViewer: React.FC<{ title: string; data: any[] | undefined }> = ({ ti
         <div className="text-zinc-400 text-sm">Нет данных диалога.</div>
       ) : (
         <div className="space-y-2 max-h-[300px] overflow-auto">
-          {data.map((turn, idx) => (
-            <div key={idx} className={`px-3 py-2 rounded-lg inline-block ${turn.speaker === "user" ? "bg-zinc-800" : "bg-indigo-900/30"}`}>
-              <div className="text-xs text-zinc-400 mb-0.5">{turn.speaker}</div>
-              <div>{String(turn.text ?? turn.content ?? "")}</div>
-            </div>
-          ))}
+          {data.map((turn, idx) => {
+            const text = turn.text || String((turn as any).content ?? "");
+            return (
+              <div
+                key={idx}
+                className={`px-3 py-2 rounded-lg inline-block ${turn.speaker === "user" ? "bg-zinc-800" : "bg-indigo-900/30"}`}
+              >
+                <div className="text-xs text-zinc-400 mb-0.5">{turn.speaker}</div>
+                <div>{text}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -848,12 +865,30 @@ const TaskPage: React.FC<{
 }> = ({ task, project, updateTask }) => {
   // предполагаем формат { dialogueA: [...], dialogueB: [...] } или массив таких объектов
   const allItems = useMemo(() => {
-    const items: any[] = [];
+    const items: Example[] = [];
     for (const f of task.files) {
+      if (Array.isArray(f.examples) && f.examples.length > 0) {
+        items.push(...f.examples);
+        continue;
+      }
       const c = f.content;
       if (!c) continue;
-      if (Array.isArray(c)) items.push(...c);
-      else items.push(c);
+      const parsed = parseUploaded(c);
+      if (parsed.length > 0) {
+        items.push(...parsed);
+        continue;
+      }
+      if (Array.isArray(c)) {
+        for (const entry of c) {
+          if (entry && (entry.dialogueA || entry.dialogueB)) {
+            items.push(entry as Example);
+          }
+        }
+        continue;
+      }
+      if (c && (c.dialogueA || c.dialogueB)) {
+        items.push(c as Example);
+      }
     }
     return items;
   }, [task.files]);
@@ -941,9 +976,9 @@ const TaskPage: React.FC<{
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className={`grid gap-4 grid-cols-1 ${item?.dialogueB?.length ? "md:grid-cols-2" : ""}`}>
         <DialogViewer title="Диалог A" data={item?.dialogueA} />
-        <DialogViewer title="Диалог B" data={item?.dialogueB} />
+        {item?.dialogueB?.length ? <DialogViewer title="Диалог B" data={item.dialogueB} /> : null}
       </div>
 
       <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
